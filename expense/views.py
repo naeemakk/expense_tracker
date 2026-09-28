@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from django.db.models import Sum    
 from django.utils import timezone
+from expense.permissions import IsOwner
 # Create your views here.
 
 class RegisterView(ViewSet):
@@ -22,7 +23,8 @@ class RegisterView(ViewSet):
     
 class ExpenseView(ViewSet):
     authentication_classes=[TokenAuthentication]
-    permission_classes=[IsAuthenticated]
+    # permission_classes=[IsAuthenticated]
+    permission_classes=[IsOwner]
     def create(self,request):
         dser=ExpenseSerializer(data=request.data)
         if dser.is_valid():
@@ -53,24 +55,25 @@ class ExpenseView(ViewSet):
     
 class ExpenseSummeryView(APIView):
     authentication_classes=[TokenAuthentication]
-    permission_classes=[IsAuthenticated]
+    # permission_classes=[IsAuthenticated]
+    permission_classes=[IsOwner]
     def get(self,request):
         cur_date=timezone.now()
         # print(cur_date)
         cur_month=cur_date.month
         cur_year=cur_date.year
-        print(cur_month,cur_year)
+        # print(cur_month,cur_year)
         data=Expenses.objects.filter(owner=request.user,created_at__month=cur_month,created_at__year=cur_year)
         category_summery=data.values('category').annotate(Sum('amount'))
         cat_summery=[summery for summery in category_summery]
-        for i in cat_summery:
+        for i in category_summery:
             print(i)
-        total_expense=data.values('amount').aggregate(total=Sum('amount'))
+        total_expense=data.values('amount').aggregate(Sum('amount'))
         print(total_expense)
         # ser=ExpenseSerializer(qs,many=True)
         context={
             "total_expense":total_expense,
             "category_summery":cat_summery
         }
-        return Response(data={"msg":"context"})
+        return Response(data=context)
 
